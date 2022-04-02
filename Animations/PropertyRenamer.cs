@@ -15,28 +15,37 @@ namespace OthereumTools.Animations
             return DisplayWizard<PropertyRenamer>(Title, "Rename");
         }
 
-        public static void Rename(IEnumerable<AnimationClip> clips, string path, string newPath)
+        public static void Rename(IEnumerable<AnimationClip> clips, IEnumerable<PathRename> paths)
         {
             foreach (var clip in clips) {
                 foreach (var binding in AnimationUtility.GetCurveBindings(clip)) {
-                    if (binding.path == path) {
-                        var newBinding = binding;
-                        newBinding.path = newPath;
-                        var curve = AnimationUtility.GetEditorCurve(clip, binding);
-                        Undo.RecordObject(clip, Title);
-                        AnimationUtility.SetEditorCurve(clip, binding, null);
-                        AnimationUtility.SetEditorCurve(clip, newBinding, curve);
+                    foreach (var path in paths) {
+                        if (binding.path == path.from) {
+                            var newBinding = binding;
+                            newBinding.path = path.to;
+                            var curve = AnimationUtility.GetEditorCurve(clip, binding);
+                            Undo.RecordObject(clip, Title);
+                            AnimationUtility.SetEditorCurve(clip, newBinding, curve);
+                            if (!path.copy) {
+                                AnimationUtility.SetEditorCurve(clip, binding, null);
+                            }
+                        }
                     }
                 }
             }
         }
 
+        [System.Serializable]
+        public struct PathRename
+        {
+            public string from;
+            public string to;
+            public bool copy;
+        }
+
 
         public List<AnimationClip> clips;
-        public string newPath;
-
-        string[] paths;
-        int selectedPath;
+        public List<PathRename> paths;
 
         void OnEnable()
         {
@@ -47,19 +56,11 @@ namespace OthereumTools.Animations
         void OnValidate()
         {
             isValid = clips.Count > 0;
-
-            var pathSet = new HashSet<string>();
-            foreach (var clip in clips) {
-                foreach (var binding in AnimationUtility.GetCurveBindings(clip)) {
-                    pathSet.Add(binding.path);
-                }
-            }
-            paths = pathSet.ToArray();
         }
 
         void OnWizardCreate()
         {
-            Rename(clips, paths.FirstOrDefault(), newPath);
+            Rename(clips, paths);
         }
 
         protected override bool DrawWizardGUI()
@@ -67,13 +68,7 @@ namespace OthereumTools.Animations
             if (clips.Count == 0) {
                 EditorGUILayout.HelpBox(AnimUtil.ClipSelectionHelpMessage, MessageType.Info);
             }
-            bool changed = base.DrawWizardGUI();
-            EditorGUI.BeginChangeCheck();
-            selectedPath = EditorGUILayout.Popup("Path", selectedPath, paths);
-            if (EditorGUI.EndChangeCheck()) {
-                changed = true;
-            }
-            return changed;
+            return base.DrawWizardGUI();
         }
     }
 }
