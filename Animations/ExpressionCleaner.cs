@@ -2,13 +2,13 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace OthereumTools.Animations
+namespace OthereumTools
 {
     public class ExpressionCleaner : ScriptableWizard
     {
         const string Title = "Clean Up Expression Clip";
 
-        [MenuItem("Animation/" + Title)]
+        [MenuItem(OthereumTools.PREFIX + Title, priority = AnimUtil.PRIORITY)]
         public static ExpressionCleaner Open()
         {
             return DisplayWizard<ExpressionCleaner>(Title, "Clean Up");

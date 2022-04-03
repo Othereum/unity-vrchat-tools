@@ -1,18 +1,17 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-namespace OthereumTools.Animations
+namespace OthereumTools
 {
     public class PropertyRenamer : ScriptableWizard
     {
         const string Title = "Rename Properties";
 
-        [MenuItem("Animation/" + Title)]
+        [MenuItem(OthereumTools.PREFIX + Title, priority = AnimUtil.PRIORITY)]
         public static PropertyRenamer Open()
         {
-            return DisplayWizard<PropertyRenamer>(Title, "Rename");
+            return DisplayWizard<PropertyRenamer>(Title, nameof(Rename));
         }
 
         public static void Rename(IEnumerable<AnimationClip> clips, IEnumerable<PathRename> paths)

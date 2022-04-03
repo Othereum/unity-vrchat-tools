@@ -3,10 +3,12 @@ using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
 
-namespace OthereumTools.Animations
+namespace OthereumTools
 {
     public static class AnimUtil
     {
+        internal const int PRIORITY = 10;
+
         public static string ClipSelectionHelpMessage =>
             Application.systemLanguage == SystemLanguage.Korean
                 ? ClipSelectionHelpMessage_KO
