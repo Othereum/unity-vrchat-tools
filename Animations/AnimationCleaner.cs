@@ -4,38 +4,27 @@ using UnityEngine;
 
 namespace OthereumTools
 {
-    public class ExpressionCleaner : ScriptableWizard
+    public class AnimationCleaner : ScriptableWizard
     {
-        const string Title = "Clean Up Expression Clip";
+        const string Title = "Clean Up Animation Clip";
 
         [MenuItem(OthereumTools.PREFIX + Title, priority = AnimUtil.PRIORITY)]
-        public static ExpressionCleaner Open()
+        public static AnimationCleaner Open()
         {
-            return DisplayWizard<ExpressionCleaner>(Title, "Clean Up");
+            return DisplayWizard<AnimationCleaner>(Title, "Clean Up");
         }
 
-        [System.Flags]
-        public enum Flags
-        {
-            ShareCommonProperties = 1 << 0,
-            RemoveUnusedCurves = 1 << 1,
-            AddKeyframeIfEmpty =  1 << 2,
-            ForceFirstKeyTimeZero = 1 << 3,
-            KeepOnlyFirstKeyframe = 1 << 4,
-            AtLeastTwoKeyframes = 1 << 5,
-        }
-
-        public static void CleanUp(IEnumerable<AnimationClip> clips, Flags flags)
+        public void CleanUp()
         {
             var commonProps = new HashSet<(string, string)>();
-            if ((flags & Flags.ShareCommonProperties) != 0) {
+            if (shareCommonProperties) {
                 foreach (var clip in clips) {
                     foreach (var binding in AnimationUtility.GetCurveBindings(clip)) {
                         if (binding.type != typeof(SkinnedMeshRenderer)) {
                             // only blendshapes are supported for now
                             continue;
                         }
-                        if ((flags & Flags.RemoveUnusedCurves) != 0) {
+                        if (removeUnusedCurves) {
                             if (!IsCurveBeingUsed(clip, binding)) {
                                 continue;
                             }
@@ -55,28 +44,28 @@ namespace OthereumTools
                     }
 
                     bool isCurveBeingUsed;
-                    if ((flags & Flags.ShareCommonProperties) != 0) {
+                    if (shareCommonProperties) {
                         isCurveBeingUsed = commonProps.Contains((binding.path, binding.propertyName));
                     } else {
                         isCurveBeingUsed = IsCurveBeingUsed(clip, binding);
                     }
 
                     if (isCurveBeingUsed) {
-                        ValidateCurve(clip, binding, flags);
+                        ValidateCurve(clip, binding);
                     }
                     else {
                         AnimationUtility.SetEditorCurve(clip, binding, null);
                     }
                     missingProps.Remove((binding.path, binding.propertyName));
                 }
-                if ((flags & Flags.ShareCommonProperties) != 0) {
+                if (shareCommonProperties) {
                     foreach (var property in missingProps) {
                         var binding = new EditorCurveBinding {
                             path = property.Item1,
                             propertyName = property.Item2,
                             type = typeof(SkinnedMeshRenderer)
                         };
-                        ValidateCurve(clip, binding, flags);
+                        ValidateCurve(clip, binding);
                     }
                 }
                 var settings = AnimationUtility.GetAnimationClipSettings(clip);
@@ -86,7 +75,7 @@ namespace OthereumTools
             }
         }
 
-        static void ValidateCurve(AnimationClip clip, EditorCurveBinding binding, Flags flags)
+        void ValidateCurve(AnimationClip clip, EditorCurveBinding binding)
         {
             var curve = AnimationUtility.GetEditorCurve(clip, binding);
             if (curve == null) {
@@ -95,19 +84,19 @@ namespace OthereumTools
 
             var keys = curve.keys;
             if (keys.Length == 0) {
-                if ((flags & Flags.AddKeyframeIfEmpty) != 0) {
+                if (addKeyframeIfEmpty) {
                     keys = new Keyframe[1];
                 } else {
                     return;
                 }
             }
-            if ((flags & Flags.ForceFirstKeyTimeZero) != 0) {
+            if (forceFirstKeyTimeZero) {
                 keys[0].time = 0f;
             }
-            if ((flags & Flags.KeepOnlyFirstKeyframe) != 0) {
+            if (keepOnlyFirstKeyframe) {
                 System.Array.Resize(ref keys, 1);
             }
-            if ((flags & Flags.AtLeastTwoKeyframes) != 0 && keys.Length < 2) {
+            if (atLeastTwoKeyframes && keys.Length < 2) {
                 System.Array.Resize(ref keys, 2);
                 keys[1].value = keys[0].value;
                 keys[1].time = keys[0].time + 1f / 30f;
@@ -150,26 +139,7 @@ namespace OthereumTools
 
         void OnWizardCreate()
         {
-            Flags flags = 0;
-            if (shareCommonProperties) {
-                flags |= Flags.ShareCommonProperties;
-            }
-            if (removeUnusedCurves) {
-                flags |= Flags.RemoveUnusedCurves;
-            }
-            if (addKeyframeIfEmpty) {
-                flags |= Flags.AddKeyframeIfEmpty;
-            }
-            if (forceFirstKeyTimeZero) {
-                flags |= Flags.ForceFirstKeyTimeZero;
-            }
-            if (keepOnlyFirstKeyframe) {
-                flags |= Flags.KeepOnlyFirstKeyframe;
-            }
-            if (atLeastTwoKeyframes) {
-                flags |= Flags.AtLeastTwoKeyframes;
-            }
-            CleanUp(clips, flags);
+            CleanUp();
         }
 
         protected override bool DrawWizardGUI()
