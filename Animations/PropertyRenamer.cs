@@ -6,7 +6,7 @@ namespace OthereumTools
 {
     public class PropertyRenamer : ScriptableWizard
     {
-        const string Title = "Rename Properties";
+        const string Title = "Rename Animation Properties";
 
         [MenuItem(OthereumTools.PREFIX + Title, priority = AnimUtil.PRIORITY)]
         public static PropertyRenamer Open()
@@ -14,20 +14,25 @@ namespace OthereumTools
             return DisplayWizard<PropertyRenamer>(Title, nameof(Rename));
         }
 
-        public static void Rename(IEnumerable<AnimationClip> clips, IEnumerable<PathRename> paths)
+        public void Rename()
         {
             foreach (var clip in clips) {
                 foreach (var binding in AnimationUtility.GetCurveBindings(clip)) {
-                    foreach (var path in paths) {
-                        if (binding.path == path.from) {
+                    foreach (var property in properties) {
+                        if (binding.path != property.originalPath) {
+                            continue;
+                        }
+
+                        var curve = AnimationUtility.GetEditorCurve(clip, binding);
+                        Undo.RecordObject(clip, Title);
+
+                        if (!string.IsNullOrEmpty(property.newPath)) {
                             var newBinding = binding;
-                            newBinding.path = path.to;
-                            var curve = AnimationUtility.GetEditorCurve(clip, binding);
-                            Undo.RecordObject(clip, Title);
+                            newBinding.path = property.newPath;
                             AnimationUtility.SetEditorCurve(clip, newBinding, curve);
-                            if (!path.copy) {
-                                AnimationUtility.SetEditorCurve(clip, binding, null);
-                            }
+                        }
+                        if (!property.copy) {
+                            AnimationUtility.SetEditorCurve(clip, binding, null);
                         }
                     }
                 }
@@ -35,16 +40,16 @@ namespace OthereumTools
         }
 
         [System.Serializable]
-        public struct PathRename
+        public struct Property
         {
-            public string from;
-            public string to;
+            public string originalPath;
+            public string newPath;
             public bool copy;
         }
 
 
         public List<AnimationClip> clips;
-        public List<PathRename> paths;
+        public List<Property> properties;
 
         void OnEnable()
         {
@@ -59,7 +64,7 @@ namespace OthereumTools
 
         void OnWizardCreate()
         {
-            Rename(clips, paths);
+            Rename();
         }
 
         protected override bool DrawWizardGUI()
